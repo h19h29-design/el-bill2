@@ -3,6 +3,7 @@
 import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import App from './App'
+import { openProView } from './testHelpers'
 import { sampleBills } from './data/sampleBills'
 import { readStorageSnapshot } from './lib/storage'
 
@@ -19,12 +20,10 @@ const pasteTable = [
 ].join('\n')
 
 describe('App beginner diagnosis flow', () => {
-  it('opens from the dashboard and atomically applies twelve pasted months', async () => {
+  it('opens from the expert menu and atomically applies twelve pasted months', async () => {
     render(<App />)
 
-    fireEvent.click(
-      await screen.findByRole('button', { name: '쉬운 진단 시작' }, { timeout: 3_000 }),
-    )
+    await openProView('쉬운 진단')
     expect(
       await screen.findByRole('heading', { name: '어떤 자료를 가지고 계신가요?' }, { timeout: 3_000 }),
     ).toBeTruthy()
@@ -55,9 +54,10 @@ describe('App beginner diagnosis flow', () => {
     expect(Date.parse(snapshot?.session.expiresAt ?? '')).toBeGreaterThan(Date.now())
   })
 
-  it('keeps the expert automatic diagnosis menu alongside the beginner flow', async () => {
+ it('keeps the expert automatic diagnosis menu alongside the beginner flow', async () => {
     render(<App />)
 
+    await openProView('대시보드')
     expect(await screen.findByRole('button', { name: '쉬운 진단' }, { timeout: 3_000 })).toBeTruthy()
     expect(screen.getByRole('button', { name: '자동진단' })).toBeTruthy()
   })

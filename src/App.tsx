@@ -11,6 +11,7 @@ import { AlertCircle, Building2, CalendarDays, ClipboardCheck } from 'lucide-rea
 import { Sidebar } from './components/layout/Sidebar'
 import { TopNotice } from './components/layout/TopNotice'
 import { ViewErrorBoundary } from './components/layout/ViewErrorBoundary'
+import { SimpleDiagnosisShell } from './components/simple/SimpleDiagnosisShell'
 import { AutoDiagnosis } from './components/diagnosis/AutoDiagnosis'
 import { RatePlanSettings } from './components/settings/RatePlanSettings'
 import { defaultRatePlans } from './data/ratePlans'
@@ -165,7 +166,7 @@ function ViewLoadingFallback() {
 
 function App() {
   const [initialStorage] = useState(initializeAppStorage)
-  const [activeView, setActiveView] = useState<ViewKey>('dashboard')
+  const [activeView, setActiveView] = useState<ViewKey>('simple')
   const [guideSectionId, setGuideSectionId] = useState<string | null>(null)
   const [bills, setBills] = useState<MonthlyBill[]>(initialStorage.data.bills)
   const [profile, setProfile] = useState<SchoolProfile>(
@@ -222,7 +223,7 @@ function App() {
     setCalculationSettings(defaults.calculationSettings)
     setPowerPlannerDataSource(defaults.powerPlanner)
     setDataProvenance(defaults.provenance)
-    setActiveView('dashboard')
+    setActiveView('simple')
     setExpiryMessage(message)
   }, [])
 
@@ -918,6 +919,29 @@ function App() {
   }
 
   return (
+    <>
+      <div hidden={activeView !== 'simple'}>
+        <ViewErrorBoundary>
+          <SimpleDiagnosisShell
+            diagnosis={diagnosis}
+            dataProvenance={dataProvenance}
+            profile={profile}
+            ratePlans={ratePlans}
+            scenario={scenario}
+            calculationSettings={calculationSettings}
+            sampleBills={sampleBills}
+            sampleProfile={defaultSchoolProfile}
+            expiresAt={storageSession?.expiresAt}
+            expiryMessage={activeView === 'simple' ? expiryMessage : ''}
+            onApply={applyEasyDiagnosisInput}
+            onOpenFeature={(view) => {
+              setGuideSectionId(null)
+              setActiveView(view)
+            }}
+          />
+        </ViewErrorBoundary>
+      </div>
+      {activeView !== 'simple' && (
     <div className="app-shell">
       <Sidebar
         activeView={activeView}
@@ -1063,7 +1087,7 @@ function App() {
             </Suspense>
           </ViewErrorBoundary>
           {activeView === 'settings' && (
-            <RatePlanSettings
+          <RatePlanSettings
               plans={ratePlans}
               onPlansChange={changeRatePlans}
               calculationSettings={calculationSettings}
@@ -1073,10 +1097,17 @@ function App() {
         </section>
       </main>
     </div>
+      )}
+    </>
   )
 }
 
 const viewMeta: Record<ViewKey, { step: string; title: string; description: string }> = {
+  simple: {
+    step: '00',
+    title: '간편 진단',
+    description: '자료 올리기, 내용 확인, 결과 보기의 간편 흐름입니다.',
+  },
   dashboard: {
     step: '01',
     title: '통합 대시보드',

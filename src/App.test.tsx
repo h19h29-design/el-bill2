@@ -10,6 +10,7 @@ import {
 } from '@testing-library/react'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import { openProView } from './testHelpers'
 import { defaultRatePlans } from './data/ratePlans'
 import { defaultCalculationSettings } from './lib/calculationSettings'
 import {
@@ -150,6 +151,7 @@ describe('data provenance persistence', () => {
       })
 
     render(<App />)
+    await openProView('대시보드')
     expect(
       await screen.findByText(
         '입력 초안을 정리하지 못했습니다. 입력은 유지됩니다. 잠시 후 자동으로 다시 시도합니다.',
@@ -173,6 +175,7 @@ describe('data provenance persistence', () => {
   it('deletes the active bill-entry draft on sample reset', async () => {
     await writeBillEntryDraft([makeBillDraft()])
     render(<App />)
+    await openProView('대시보드')
 
     fireEvent.click(
       screen.getByRole('button', { name: '시연 샘플로 초기화' }),
@@ -185,9 +188,7 @@ describe('data provenance persistence', () => {
 
   it('cancels a pending manual draft write on sample reset', async () => {
     render(<App />)
-    fireEvent.click(
-      screen.getByRole('button', { name: '고지서 입력' }),
-    )
+    await openProView('고지서 입력')
     fireEvent.click(
       await screen.findByRole(
         'tab',
@@ -210,7 +211,7 @@ describe('data provenance persistence', () => {
   it('opens the usage guide from the sidebar', async () => {
     render(<App />)
 
-    fireEvent.click(screen.getByRole('button', { name: '사용 안내' }))
+    await openProView('사용 안내')
 
     expect(
       await screen.findByRole('heading', { name: '파일을 그대로 올리기', level: 3 }),
@@ -236,7 +237,7 @@ describe('data provenance persistence', () => {
     ).toBe(true)
 
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: '설정' }))
+    await openProView('설정')
 
     expect(
       (
@@ -261,7 +262,7 @@ describe('data provenance persistence', () => {
       ).ok,
     ).toBe(true)
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: '설정' }))
+    await openProView('설정')
     expect(
       (
         screen.getByRole('radio', {
@@ -318,7 +319,7 @@ describe('data provenance persistence', () => {
     })
 
     render(<App />)
-    fireEvent.click(screen.getByRole('button', { name: '설정' }))
+    await openProView('설정')
     fireEvent.click(
       screen.getByRole('radio', { name: '요금표 기반 전체 추정' }),
     )
@@ -339,8 +340,9 @@ describe('data provenance persistence', () => {
     ).toBeTruthy()
   })
 
-  it('warns users to keep one tab open when Web Locks are unavailable', () => {
+  it('warns users to keep one tab open when Web Locks are unavailable', async () => {
     render(<App />)
+    await openProView('대시보드')
 
     expect(
       screen.getByText(
@@ -350,9 +352,10 @@ describe('data provenance persistence', () => {
   })
 
   it('removes an ambiguous legacy upload mode without granting upload eligibility', async () => {
-    localStorage.setItem('el-bill:data-mode', stored('uploaded'))
+   localStorage.setItem('el-bill:data-mode', stored('uploaded'))
 
     render(<App />)
+    await openProView('대시보드')
 
     expect(document.querySelector('.notice-detail')?.textContent).toContain(
       '고지서: 시연 샘플',
@@ -368,10 +371,11 @@ describe('data provenance persistence', () => {
     localStorage.setItem('el-bill:bills', stored(sampleBills))
     localStorage.setItem(
       'el-bill:power-planner',
-      stored(samplePowerPlannerDataSource),
+     stored(samplePowerPlannerDataSource),
     )
 
     render(<App />)
+    await openProView('대시보드')
 
     expect(document.querySelector('.notice-detail')?.textContent).toContain(
       '고지서: 시연 샘플',
@@ -398,6 +402,7 @@ describe('data provenance persistence', () => {
     ).toBe(true)
 
     render(<App />)
+    await openProView('대시보드')
 
     expect(document.querySelector('.notice-detail')?.textContent).toContain(
       '파워플래너: 사용자 업로드',
@@ -419,6 +424,7 @@ describe('shared live storage expiry', () => {
     ).toBe(true)
 
     render(<App />)
+    await openProView('대시보드')
     expect(document.querySelector('.notice-detail')?.textContent).toContain(
       '고지서: 파일 업로드',
     )
@@ -431,7 +437,8 @@ describe('shared live storage expiry', () => {
     expect(
       localStorage.getItem(storageSnapshotKeyFor('expiry-session')),
     ).toBeNull()
-    expect(screen.getByText('24시간이 지나 시연 데이터가 삭제되었습니다.')).toBeTruthy()
+   expect(screen.getByText('24시간이 지나 시연 데이터가 삭제되었습니다.')).toBeTruthy()
+    await openProView('대시보드')
     expect(document.querySelector('.notice-detail')?.textContent).toContain(
       '고지서: 시연 샘플',
     )
@@ -524,13 +531,15 @@ describe('shared live storage expiry', () => {
     await flushStorageTasks()
 
     expect(localStorage.getItem(storageSnapshotKeyFor(sessionId))).toBeNull()
+    await openProView('대시보드')
     expect(document.querySelector('.notice-detail')?.textContent).toContain(
       '현재 저장된 사용자 데이터 없음',
     )
   })
 
-  it('does not show an expiry countdown without a root snapshot', () => {
+  it('does not show an expiry countdown without a root snapshot', async () => {
     render(<App />)
+    await openProView('대시보드')
 
     expect(document.querySelector('.notice-detail')?.textContent).toContain(
       '현재 저장된 사용자 데이터 없음',

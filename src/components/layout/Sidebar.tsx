@@ -13,6 +13,7 @@ import {
   ShieldCheck,
   WandSparkles,
   X,
+  Zap,
 } from 'lucide-react'
 import { useState } from 'react'
 import type { ViewKey } from '../../types'
@@ -22,6 +23,7 @@ const navItems: Array<{
   label: string
   icon: typeof LayoutDashboard
 }> = [
+  { key: 'simple', label: '간편 진단', icon: Zap },
   { key: 'dashboard', label: '대시보드', icon: LayoutDashboard },
   { key: 'easyDiagnosis', label: '쉬운 진단', icon: WandSparkles },
   { key: 'diagnosis', label: '자동진단', icon: ClipboardCheck },

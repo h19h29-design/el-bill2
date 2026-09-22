@@ -118,7 +118,25 @@ const expectBillDraftStorageRemoved = async (page: Page) => {
     .toEqual({ pointer: null, generations: [] })
 }
 
+const proDrawerTitleByNavLabel: Record<string, string> = {
+  '쉬운 진단': '쉬운 진단 마법사',
+  '자동진단': '전문 자동진단',
+  '사용 안내': '전체 사용 안내',
+}
+
 const openDesktopView = async (page: Page, name: string) => {
+  // 앱이 마운트될 때까지 기다린 뒤 간편 진단 화면인지 확인한다.
+  await page.locator('.eb-root, .app-shell').first().waitFor({ state: 'attached' })
+  const toolsButton = page.getByRole('button', { name: '전문 기능', exact: true })
+  if (await toolsButton.isVisible()) {
+    await toolsButton.click()
+    const title = proDrawerTitleByNavLabel[name] ?? name
+    await page
+      .locator('.eb-drawer')
+      .getByRole('button', { name: title, exact: true })
+      .click()
+    return
+  }
   await page.locator('.sidebar-nav').getByRole('button', { name, exact: true }).click()
 }
 
@@ -166,10 +184,7 @@ test('production preview serves hashed entry and lazy chunks', async ({ page }) 
     .getAttribute('src')
   expect(entryScript).toMatch(/^\/assets\/index-[A-Za-z0-9_-]+\.js$/)
 
-  await page.locator('.sidebar-nav').getByRole('button', {
-    name: '고지서 입력',
-    exact: true,
-  }).click()
+  await openDesktopView(page, '고지서 입력')
   await expect(page.getByRole('heading', { name: '고지서 업로드' })).toBeVisible()
 
   const scriptAssets = await page.evaluate(() =>
@@ -191,7 +206,7 @@ test('beginner diagnosis accepts twelve pasted months and shows a clear decision
 }) => {
   await clearBrowserStorage(page)
 
-  await page.getByRole('button', { name: '쉬운 진단 시작' }).click()
+  await openDesktopView(page, '쉬운 진단')
   await expect(
     page.getByRole('heading', { name: '어떤 자료를 가지고 계신가요?' }),
   ).toBeVisible()
@@ -238,7 +253,7 @@ test('beginner diagnosis accepts twelve pasted months and shows a clear decision
 test('beginner diagnosis reads twelve official bill PDFs end to end', async ({ page }) => {
   await clearBrowserStorage(page)
 
-  await page.getByRole('button', { name: '쉬운 진단 시작' }).click()
+  await openDesktopView(page, '쉬운 진단')
   await page.getByRole('button', { name: /고지서 PDF/ }).click()
   await page.getByLabel('12개월 고지서 PDF 선택').setInputFiles(billPdfPayloads)
   await expect(page.getByText(/12개월을 인식했습니다/)).toBeVisible({ timeout: 30_000 })
@@ -253,7 +268,7 @@ test('beginner diagnosis reads twelve official bill PDFs end to end', async ({ p
 test('beginner diagnosis reads a checked-in workbook and keeps expert diagnosis available', async ({ page }) => {
   await clearBrowserStorage(page)
 
-  await page.getByRole('button', { name: '쉬운 진단 시작' }).click()
+  await openDesktopView(page, '쉬운 진단')
   await page.getByRole('button', { name: /요금 정리표/ }).click()
   await page.getByLabel('12개월 요금 정리표 선택').setInputFiles(
     resolve('e2e/fixtures/monthly-bills.xlsx'),
@@ -270,7 +285,7 @@ test('beginner diagnosis blocks eleven months and presents readable mobile progr
   await page.setViewportSize({ width: 390, height: 844 })
   await clearBrowserStorage(page)
 
-  await page.getByRole('button', { name: '쉬운 진단 시작' }).click()
+  await openDesktopView(page, '쉬운 진단')
   await page.getByRole('button', { name: /표 붙여넣기/ }).click()
   await expect(page.getByLabel('자료 선택 완료')).toBeVisible()
   await expect(page.getByLabel('자료 넣기 진행 중')).toBeVisible()
@@ -376,20 +391,14 @@ test('tariff-full calculation mode persists into diagnosis and documents after r
   await page.evaluate(() => localStorage.clear())
   await page.reload()
 
-  await page.locator('.sidebar-nav').getByRole('button', {
-    name: '고지서 입력',
-    exact: true,
-  }).click()
+  await openDesktopView(page, '고지서 입력')
   await page
     .locator('input[type="file"][accept=".xlsx,.xls"]')
     .first()
     .setInputFiles(resolve('e2e/fixtures/monthly-bills.xlsx'))
   await page.getByRole('button', { name: '이 데이터로 분석 시작' }).click()
 
-  await page.locator('.sidebar-nav').getByRole('button', {
-    name: '설정',
-    exact: true,
-  }).click()
+  await openDesktopView(page, '설정')
   await page.getByText('요금표 기반 전체 추정', { exact: true }).click()
   await page.getByLabel('기후환경요금 단가(원/kWh)').fill('10')
   await expect
@@ -423,27 +432,19 @@ test('tariff-full calculation mode persists into diagnosis and documents after r
     })
 
   await page.reload()
-  await page.locator('.sidebar-nav').getByRole('button', {
-    name: '설정',
-    exact: true,
-  }).click()
+  await openDesktopView(page, '설정')
   await expect(
     page.getByRole('radio', { name: '요금표 기반 전체 추정' }),
   ).toBeChecked()
   await expect(page.getByLabel('기후환경요금 단가(원/kWh)')).toHaveValue('10')
 
-  await page.locator('.sidebar-nav').getByRole('button', {
-    name: '자동진단',
-    exact: true,
-  }).click()
+  await openDesktopView(page, '자동진단')
   await expect(
     page.getByText('요금표 기반 전체 추정', { exact: true }).first(),
   ).toBeVisible()
 
-  await page.locator('.sidebar-nav').getByRole('button', {
-    name: '문서생성',
-    exact: true,
-  }).click()
+  await openDesktopView(page, '문서생성')
+  await page.getByText('계산 근거 · 담당자 검토 항목 보기', { exact: true }).click()
   await expect(
     page.getByText(/계산 모드: 요금표 기반 전체 추정/),
   ).toBeVisible()
@@ -455,10 +456,7 @@ test('two tabs merge different active-session edits under Web Locks', async ({ p
   await page.evaluate(() => localStorage.clear())
   await page.reload()
 
-  await page.locator('.sidebar-nav').getByRole('button', {
-    name: '고지서 입력',
-    exact: true,
-  }).click()
+  await openDesktopView(page, '고지서 입력')
   await page
     .locator('input[type="file"][accept=".xlsx,.xls"]')
     .first()
@@ -468,6 +466,7 @@ test('two tabs merge different active-session edits under Web Locks', async ({ p
 
   const secondPage = await page.context().newPage()
   await secondPage.goto('/')
+  await openDesktopView(secondPage, '대시보드')
   await expect(
     secondPage.getByText('고지서: 파일 업로드', { exact: true }),
   ).toBeVisible()
@@ -478,14 +477,8 @@ test('two tabs merge different active-session edits under Web Locks', async ({ p
     await secondPage.evaluate(() => typeof navigator.locks?.request),
   ).toBe('function')
 
-  await page.locator('.sidebar-nav').getByRole('button', {
-    name: '학교정보',
-    exact: true,
-  }).click()
-  await secondPage.locator('.sidebar-nav').getByRole('button', {
-    name: '피크관리',
-    exact: true,
-  }).click()
+  await openDesktopView(page, '학교정보')
+  await openDesktopView(secondPage, '피크관리')
 
   await page.getByLabel('화면 표시명').fill('교차 탭 학교')
   await expect
@@ -587,19 +580,13 @@ test('two tabs merge concurrent PowerPlanner uploads without losing bill or prof
   await page.goto('/')
   await page.evaluate(() => localStorage.clear())
   await page.reload()
-  await page.locator('.sidebar-nav').getByRole('button', {
-    name: '고지서 입력',
-    exact: true,
-  }).click()
+  await openDesktopView(page, '고지서 입력')
   await page
     .locator('input[type="file"][accept=".xlsx,.xls"]')
     .first()
     .setInputFiles(resolve('e2e/fixtures/monthly-bills.xlsx'))
   await page.getByRole('button', { name: '이 데이터로 분석 시작' }).click()
-  await page.locator('.sidebar-nav').getByRole('button', {
-    name: '학교정보',
-    exact: true,
-  }).click()
+  await openDesktopView(page, '학교정보')
   await page.getByLabel('화면 표시명').fill('동시 업로드 학교')
   const billCountBeforeUploads = await page.evaluate(() => {
     const pointer = JSON.parse(
@@ -618,10 +605,7 @@ test('two tabs merge concurrent PowerPlanner uploads without losing bill or prof
   const secondPage = await page.context().newPage()
   await secondPage.goto('/')
   for (const currentPage of [page, secondPage]) {
-    await currentPage.locator('.sidebar-nav').getByRole('button', {
-      name: '파워플래너',
-      exact: true,
-    }).click()
+    await openDesktopView(currentPage, '파워플래너')
   }
   await page
     .locator('input[type="file"][accept=".xlsx,.xls,.csv"]')
@@ -735,14 +719,14 @@ test('PowerPlanner-only upload stays sample-bill mode', async ({ page }, testInf
   await page.evaluate(() => localStorage.clear())
   await page.reload()
 
-  await page.locator('.sidebar-nav').getByRole('button', { name: '파워플래너', exact: true }).click()
+  await openDesktopView(page, '파워플래너')
   await page.locator('input[type="file"][accept=".xlsx,.xls,.csv"]').setInputFiles(powerPlannerCsv)
   await page.getByRole('button', { name: '매핑 적용' }).click()
 
   await expect(page.getByText('고지서: 시연 샘플', { exact: true })).toBeVisible()
   await expect(page.getByText('파워플래너: 사용자 업로드', { exact: true })).toBeVisible()
 
-  await page.locator('.sidebar-nav').getByRole('button', { name: '문서생성', exact: true }).click()
+  await openDesktopView(page, '문서생성')
   await expect(page.getByRole('button', { name: 'PDF 미리보기' }).first()).toBeVisible()
   await expect(page.getByRole('button', { name: '전체 다운로드 (ZIP)' })).toBeDisabled()
   await expect(page.getByText('사용자 고지서 업로드 후 생성 가능', { exact: true })).toBeVisible()
@@ -762,14 +746,14 @@ test('PowerPlanner file replaces a demo sample and clearing it preserves bill or
   await page.goto('/')
   await page.evaluate(() => localStorage.clear())
   await page.reload()
-  await page.locator('.sidebar-nav').getByRole('button', { name: '파워플래너', exact: true }).click()
+  await openDesktopView(page, '파워플래너')
   await page.getByRole('button', { name: '시연 샘플 적용' }).click()
-  await page.locator('.sidebar-nav').getByRole('button', { name: '파워플래너', exact: true }).click()
+  await openDesktopView(page, '파워플래너')
   await expect(page.locator('.power-summary-grid article').first()).toContainText('25건')
 
   await page.locator('input[type="file"][accept=".xlsx,.xls,.csv"]').setInputFiles(powerPlannerCsv)
   await page.getByRole('button', { name: '매핑 적용' }).click()
-  await page.locator('.sidebar-nav').getByRole('button', { name: '파워플래너', exact: true }).click()
+  await openDesktopView(page, '파워플래너')
   await expect(page.locator('.power-summary-grid article').first()).toContainText('2건')
   await expect(page.getByText('파워플래너: 사용자 업로드', { exact: true })).toBeVisible()
 
@@ -794,13 +778,14 @@ test('automatic diagnosis flow remains usable end to end', async ({ page }, test
     await expect(page.locator('.view-heading h2').filter({ hasText: name })).toBeVisible()
   }
   const clickSidebar = async (name: string) => {
-    await page.locator('.sidebar-nav').getByRole('button', { name, exact: true }).click()
+    await openDesktopView(page, name)
   }
 
   await page.goto('/')
   await page.evaluate(() => localStorage.clear())
   await page.reload()
 
+  await openDesktopView(page, '대시보드')
   await expectViewHeading('통합 대시보드')
   await expect(page.locator('.diagnosis-status-card')).toContainText(
     '진단 완료',
@@ -841,14 +826,15 @@ test('automatic diagnosis flow remains usable end to end', async ({ page }, test
   await expect(page.getByLabel('업로드 데이터 유형')).toHaveValue('monthlyUsage')
 
   await clickSidebar('피크관리')
+  await page.getByText('설비 조건 바꾸기', { exact: true }).click()
   await page.getByLabel('본관 EHP 그룹 수').fill('8')
-  await expect(page.getByText('본관 EHP 8개 그룹')).toBeVisible()
+  await expect(page.getByText('본관 EHP 8그룹 순차 기동')).toBeVisible()
 
   await clickSidebar('요금제 비교')
   await page.getByLabel('예상 최대수요전력(kW)').fill('650')
   await page.getByRole('button', { name: '시뮬레이션 설정' }).click()
   await clickSidebar('피크관리')
-  await expect(page.getByText('본관 EHP 8개 그룹')).toBeVisible()
+  await expect(page.getByText('본관 EHP 8그룹 순차 기동')).toBeVisible()
   await expect(page.getByLabel('예상 피크(kW)')).toHaveValue('650')
 
   await clickSidebar('학교정보')
@@ -897,7 +883,7 @@ test('automatic diagnosis flow remains usable end to end', async ({ page }, test
 
   for (const [index, expectedPdfName] of expectedPdfNames.entries()) {
     const pdfDownload = page.waitForEvent('download')
-    await page.getByRole('button', { name: '다운로드' }).nth(index).click()
+    await page.getByRole('button', { name: '다운로드', exact: true }).nth(index).click()
     const downloadedPdf = await pdfDownload
     await expect(downloadedPdf.suggestedFilename()).toBe(expectedPdfName)
     const pdfPath = testInfo.outputPath(`document-${index}.pdf`)
@@ -913,7 +899,7 @@ test('invalid peak target is rejected', async ({ page }) => {
   await page.evaluate(() => localStorage.clear())
   await page.reload()
 
-  await page.locator('.sidebar-nav').getByRole('button', { name: '피크관리', exact: true }).click()
+  await openDesktopView(page, '피크관리')
   await page.getByLabel('목표 피크(kW)').fill('0')
   await page.getByLabel('예상 피크(kW)').fill('-1')
 
@@ -928,6 +914,7 @@ test('mobile core workflow keeps navigation and wide content usable', async ({ p
   await page.evaluate(() => localStorage.clear())
   await page.reload()
 
+  await openDesktopView(page, '대시보드')
   const menuButton = page.getByRole('button', { name: '주요 메뉴 열기' })
   await expect(menuButton).toBeVisible()
   await expect(menuButton).toHaveAttribute('aria-expanded', 'false')
@@ -938,13 +925,13 @@ test('mobile core workflow keeps navigation and wide content usable', async ({ p
     'aria-expanded',
     'true',
   )
-  await page.locator('.sidebar-nav').getByRole('button', { name: '자동진단' }).click()
+  await openDesktopView(page, '자동진단')
   await expect(page.locator('.sidebar-nav')).not.toBeVisible()
 
   await expect(page.getByText('표를 좌우로 밀어 전체 후보를 확인하세요.')).toBeVisible()
 
   await page.getByRole('button', { name: '주요 메뉴 열기' }).click()
-  await page.locator('.sidebar-nav').getByRole('button', { name: '문서생성' }).click()
+  await openDesktopView(page, '문서생성')
   await page.getByRole('button', { name: '변경신청서' }).click()
   await expect(page.getByText('문서를 좌우로 밀어 원본 크기로 확인하세요.')).toBeVisible()
 
@@ -1188,11 +1175,7 @@ test('mobile personal input tabs and guide navigation do not overlap', async ({
   await page.setViewportSize({ width: 390, height: 844 })
   await clearBrowserStorage(page)
 
-  await page.getByRole('button', { name: '주요 메뉴 열기' }).click()
-  await page.locator('.sidebar-nav').getByRole('button', {
-    name: '고지서 입력',
-    exact: true,
-  }).click()
+  await openDesktopView(page, '고지서 입력')
 
   const inputTabs = page.getByRole('tablist', { name: '고지서 입력 방식' })
   const fileTab = inputTabs.getByRole('tab', { name: '파일 업로드' })
@@ -1225,5 +1208,78 @@ test('mobile personal input tabs and guide navigation do not overlap', async ({
   await expect(page.getByRole('heading', { name: 'GPT로 CSV 변환' })).toBeFocused()
   await expect
     .poll(() => page.evaluate(() => document.documentElement.scrollWidth <= innerWidth))
+    .toBe(true)
+})
+
+test('simple flow turns pasted bills into a result and reaches document generation', async ({ page }) => {
+  await clearBrowserStorage(page)
+
+  await expect(
+    page.getByRole('heading', { name: /바꾸면 얼마나 줄어들까요/ }),
+  ).toBeVisible()
+
+  await page.getByRole('button', { name: '파일 없이 입력하기' }).click()
+  await page
+    .locator('.eb-dialog')
+    .getByRole('button', { name: '표 붙여넣기', exact: true })
+    .click()
+  await page.getByLabel('월별 표 붙여넣기').fill(pastedBillText)
+  await page.getByRole('button', { name: '표 확인하기' }).click()
+
+  await expect(
+    page.getByRole('heading', { name: '월별 전기요금' }),
+  ).toBeVisible()
+  await expect(page.getByText(/연속 12개월을 확인했어요/)).toBeVisible()
+
+  await page.getByLabel('계약종별', { exact: true }).selectOption('교육용(갑)')
+  await page.getByLabel('수전전압', { exact: true }).selectOption('고압A')
+  await page
+    .getByLabel('지금 사용 중인 요금제', { exact: true })
+    .selectOption('선택요금Ⅱ')
+  await page.getByLabel('요금적용전력 kW', { exact: true }).fill('500')
+  await page.getByRole('checkbox').check()
+  await page.getByRole('button', { name: '요금제 비교하기' }).click()
+
+  await expect(
+    page.getByRole('heading', {
+      name: /유리한 것으로 추정됩니다|유지가 유리합니다|추가 확인이 필요합니다/,
+    }),
+  ).toBeVisible()
+
+  await openDesktopView(page, '문서생성')
+  await expect(
+    page.getByRole('heading', { name: '변경신청 패키지 자동 생성' }),
+  ).toBeVisible()
+})
+
+test('simple flow reads a workbook upload into the review table', async ({ page }) => {
+  await clearBrowserStorage(page)
+
+  await page
+    .getByLabel('고지서 또는 요금 정리표 파일 선택')
+    .setInputFiles(resolve('e2e/fixtures/monthly-bills.xlsx'))
+
+  await expect(
+    page.getByRole('heading', { name: '월별 전기요금' }),
+  ).toBeVisible()
+  await expect(page.getByText(/개월을 인식했어요/)).toBeVisible()
+})
+
+test('simple start screen stays usable on a mobile viewport', async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 })
+  await clearBrowserStorage(page)
+
+  await expect(
+    page.getByRole('heading', { name: /바꾸면 얼마나 줄어들까요/ }),
+  ).toBeVisible()
+  await expect(
+    page.getByRole('button', { name: '고지서·엑셀 올리기' }),
+  ).toBeVisible()
+  await page.getByRole('button', { name: '전문 기능', exact: true }).click()
+  await expect(page.locator('.eb-drawer')).toBeVisible()
+  await expect
+    .poll(() =>
+      page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    )
     .toBe(true)
 })

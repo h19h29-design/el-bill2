@@ -1,4 +1,5 @@
 export type ViewKey =
+  | 'simple'
   | 'dashboard'
   | 'easyDiagnosis'
   | 'diagnosis'

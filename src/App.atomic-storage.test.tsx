@@ -12,6 +12,7 @@ import {
 } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from './App'
+import { openProView } from './testHelpers'
 import { defaultRatePlans } from './data/ratePlans'
 import {
   defaultScenario,
@@ -134,11 +135,12 @@ describe('App session-scoped storage integration', () => {
           provenance: { bills: 'uploaded', powerPlanner: 'uploaded' },
         }),
         now,
-        'reload-session',
+       'reload-session',
       )).ok,
     ).toBe(true)
 
     render(<App />)
+    await openProView('대시보드')
 
     expect(document.querySelector('.notice-detail')?.textContent).toContain(
       '고지서: 파일 업로드',
@@ -157,9 +159,9 @@ describe('App session-scoped storage integration', () => {
     const failedUploadId = '00000000-0000-4000-8000-000000000001'
     failWritesFor(failedUploadId)
     const originalRandomUuid = globalThis.crypto.randomUUID
-    vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue(failedUploadId)
+   vi.spyOn(globalThis.crypto, 'randomUUID').mockReturnValue(failedUploadId)
 
-    fireEvent.click(screen.getByRole('button', { name: /^고지서 입력$/ }))
+    await openProView('고지서 입력')
     const input = await waitFor(() => {
       const element = document.querySelector<HTMLInputElement>(
         'input[accept=".csv"]',
@@ -206,7 +208,7 @@ describe('App session-scoped storage integration', () => {
       ).ok,
     ).toBe(true)
 
-    fireEvent.click(screen.getByRole('button', { name: /^고지서 입력$/ }))
+    await openProView('고지서 입력')
     const input = await waitFor(() => {
       const element = document.querySelector<HTMLInputElement>(
         'input[accept=".csv"]',
@@ -244,9 +246,10 @@ describe('App session-scoped storage integration', () => {
 
   it('adopts a new pointer winner and ignores events for inactive snapshot keys', async () => {
     expect(
-      (await startNewStorageSnapshot(makeData(), now, 'first-tab')).ok,
+     (await startNewStorageSnapshot(makeData(), now, 'first-tab')).ok,
     ).toBe(true)
     render(<App />)
+    await openProView('대시보드')
     expect(document.querySelector('.notice-detail')?.textContent).toContain(
       '파워플래너: 미사용',
     )
@@ -290,9 +293,10 @@ describe('App session-scoped storage integration', () => {
 
   it('adopts active-session edits and resets when its snapshot is removed', async () => {
     expect(
-      (await startNewStorageSnapshot(makeData(), now, 'active-tab')).ok,
+     (await startNewStorageSnapshot(makeData(), now, 'active-tab')).ok,
     ).toBe(true)
     render(<App />)
+    await openProView('대시보드')
     const updatedData = makeData({
       provenance: { bills: 'uploaded', powerPlanner: 'none' },
     })
@@ -333,6 +337,7 @@ describe('App session-scoped storage integration', () => {
         }),
       )
     })
+    await openProView('대시보드')
     expect(document.querySelector('.notice-detail')?.textContent).toContain(
       '고지서: 시연 샘플',
     )
@@ -347,6 +352,7 @@ describe('App session-scoped storage integration', () => {
       )).ok,
     ).toBe(true)
     render(<App />)
+    await openProView('대시보드')
     localStorage.removeItem(storageActivePointerKey)
 
     act(() => {
@@ -359,6 +365,7 @@ describe('App session-scoped storage integration', () => {
       )
     })
 
+    await openProView('대시보드')
     expect(document.querySelector('.notice-detail')?.textContent).toContain(
       '고지서: 시연 샘플',
     )
@@ -398,10 +405,12 @@ describe('App session-scoped storage integration', () => {
       nativeRemoveItem.call(this, key)
     })
 
+    await openProView('대시보드')
     fireEvent.click(
       screen.getByRole('button', { name: '시연 샘플로 초기화' }),
     )
 
+    await openProView('대시보드')
     await waitFor(() =>
       expect(document.querySelector('.notice-detail')?.textContent).toContain(
         '고지서: 시연 샘플',
@@ -443,8 +452,8 @@ describe('App session-scoped storage integration', () => {
       (await startNewStorageSnapshot(makeData(), now, 'profile-session')).ok,
     ).toBe(true)
     render(<App />)
-    failWritesFor('profile-session')
-    fireEvent.click(screen.getByRole('button', { name: '학교정보' }))
+   failWritesFor('profile-session')
+    await openProView('학교정보')
     const input = await screen.findByLabelText('화면 표시명')
 
     fireEvent.change(input, { target: { value: '변경된 학교' } })
@@ -462,8 +471,8 @@ describe('App session-scoped storage integration', () => {
       (await startNewStorageSnapshot(makeData(), now, 'scenario-session')).ok,
     ).toBe(true)
     render(<App />)
-    failWritesFor('scenario-session')
-    fireEvent.click(screen.getByRole('button', { name: '피크관리' }))
+   failWritesFor('scenario-session')
+    await openProView('피크관리')
     const input = await screen.findByLabelText('목표 피크(kW)')
 
     fireEvent.change(input, { target: { value: '777' } })
@@ -481,8 +490,8 @@ describe('App session-scoped storage integration', () => {
       (await startNewStorageSnapshot(makeData(), now, 'rate-session')).ok,
     ).toBe(true)
     render(<App />)
-    failWritesFor('rate-session')
-    fireEvent.click(screen.getByRole('button', { name: '설정' }))
+   failWritesFor('rate-session')
+    await openProView('설정')
     const input = (await screen.findAllByLabelText('요금제명'))[0]
 
     fireEvent.change(input, { target: { value: '저장 실패 요금제' } })
@@ -504,8 +513,8 @@ describe('App session-scoped storage integration', () => {
       ).ok,
     ).toBe(true)
     render(<App />)
-    failWritesFor('power-planner-session')
-    fireEvent.click(screen.getByRole('button', { name: '파워플래너' }))
+   failWritesFor('power-planner-session')
+    await openProView('파워플래너')
     fireEvent.click(await screen.findByRole('button', { name: '시연 샘플 적용' }))
 
     expect(
