@@ -127,7 +127,17 @@ const proDrawerTitleByNavLabel: Record<string, string> = {
 const openDesktopView = async (page: Page, name: string) => {
   // 앱이 마운트될 때까지 기다린 뒤 간편 진단 화면인지 확인한다.
   await page.locator('.eb-root, .app-shell').first().waitFor({ state: 'attached' })
+  const menuButton = page.getByRole('button', { name: '전체 메뉴', exact: true })
   const toolsButton = page.getByRole('button', { name: '전문 기능', exact: true })
+  if (await menuButton.isVisible()) {
+    // 에너지 랜딩에서는 전체 메뉴가 같은 ViewKey로 연결된다.
+    await menuButton.click()
+    await page
+      .locator('.menu-dialog')
+      .getByRole('button', { name, exact: true })
+      .click()
+    return
+  }
   if (await toolsButton.isVisible()) {
     await toolsButton.click()
     const title = proDrawerTitleByNavLabel[name] ?? name
@@ -138,6 +148,16 @@ const openDesktopView = async (page: Page, name: string) => {
     return
   }
   await page.locator('.sidebar-nav').getByRole('button', { name, exact: true }).click()
+}
+
+const dismissSimpleLanding = async (page: Page) => {
+  const cta = page.getByRole('button', {
+    name: '전기요금 절감 확인하기',
+    exact: true,
+  })
+  if (await cta.isVisible()) {
+    await cta.click()
+  }
 }
 
 const assertNoHorizontalOverlap = async (
@@ -1213,6 +1233,7 @@ test('mobile personal input tabs and guide navigation do not overlap', async ({
 
 test('simple flow turns pasted bills into a result and reaches document generation', async ({ page }) => {
   await clearBrowserStorage(page)
+  await dismissSimpleLanding(page)
 
   await expect(
     page.getByRole('heading', { name: /바꾸면 얼마나 줄어들까요/ }),
@@ -1254,6 +1275,7 @@ test('simple flow turns pasted bills into a result and reaches document generati
 
 test('simple flow reads a workbook upload into the review table', async ({ page }) => {
   await clearBrowserStorage(page)
+  await dismissSimpleLanding(page)
 
   await page
     .getByLabel('고지서 또는 요금 정리표 파일 선택')
@@ -1268,6 +1290,7 @@ test('simple flow reads a workbook upload into the review table', async ({ page 
 test('simple start screen stays usable on a mobile viewport', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 })
   await clearBrowserStorage(page)
+  await dismissSimpleLanding(page)
 
   await expect(
     page.getByRole('heading', { name: /바꾸면 얼마나 줄어들까요/ }),

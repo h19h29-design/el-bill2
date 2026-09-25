@@ -1,42 +1,11 @@
 import {
-  Activity,
-  BookOpen,
-  Building2,
-  Calculator,
-  ClipboardCheck,
-  FileSpreadsheet,
-  FileText,
-  LayoutDashboard,
   Menu,
-  PlugZap,
-  Settings,
   ShieldCheck,
-  WandSparkles,
   X,
-  Zap,
 } from 'lucide-react'
 import { useState } from 'react'
 import type { ViewKey } from '../../types'
-
-const navItems: Array<{
-  key: ViewKey
-  label: string
-  icon: typeof LayoutDashboard
-}> = [
-  { key: 'simple', label: '간편 진단', icon: Zap },
-  { key: 'dashboard', label: '대시보드', icon: LayoutDashboard },
-  { key: 'easyDiagnosis', label: '쉬운 진단', icon: WandSparkles },
-  { key: 'diagnosis', label: '자동진단', icon: ClipboardCheck },
-  { key: 'school', label: '학교정보', icon: Building2 },
-  { key: 'bills', label: '고지서 입력', icon: FileSpreadsheet },
-  { key: 'powerPlanner', label: '파워플래너', icon: PlugZap },
-  { key: 'rates', label: '요금제 비교', icon: Calculator },
-  { key: 'peak', label: '피크관리', icon: Activity },
-  { key: 'docs', label: '문서생성', icon: FileText },
-  { key: 'guide', label: '사용 안내', icon: BookOpen },
-  { key: 'settings', label: '설정', icon: Settings },
-]
-
+import { viewMenuItems } from '../../lib/viewMenu'
 interface SidebarProps {
   activeView: ViewKey
   onChange: (view: ViewKey) => void
@@ -66,7 +35,7 @@ export function Sidebar({ activeView, onChange }: SidebarProps) {
         className={menuOpen ? 'sidebar-nav open' : 'sidebar-nav'}
         aria-label="주요 메뉴"
       >
-        {navItems.map((item) => {
+        {viewMenuItems.map((item) => {
           const Icon = item.icon
           return (
             <button

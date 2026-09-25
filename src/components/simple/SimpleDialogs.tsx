@@ -1,100 +1,47 @@
 import {
-  Activity,
   ArrowRight,
-  BookOpen,
-  Building2,
-  Calculator,
   ChevronRight,
-  ClipboardList,
   Copy,
   Download,
-  FileSpreadsheet,
-  FileText,
-  LayoutDashboard,
   PenLine,
-  PlugZap,
-  Settings,
-  WandSparkles,
 } from 'lucide-react'
 import type { ViewKey } from '../../types'
 import { EbDialog } from './EbDialog'
 import type { useSimpleDiagnosis } from './useSimpleDiagnosis'
 
+import { viewMenuItems } from '../../lib/viewMenu'
+
 type SimpleState = ReturnType<typeof useSimpleDiagnosis>
 
-const featureItems: Array<{
-  key: ViewKey
-  title: string
-  desc: string
-  icon: typeof LayoutDashboard
-}> = [
-  {
-    key: 'dashboard',
-    title: '대시보드',
-    desc: '월별 추이와 전체 현황',
-    icon: LayoutDashboard,
-  },
-  {
-    key: 'easyDiagnosis',
+// Keys and icons come from the shared menu definition; the drawer keeps
+// its more descriptive titles and one-line descriptions.
+const drawerMeta: Partial<
+  Record<ViewKey, { title: string; desc: string }>
+> = {
+  dashboard: { title: '대시보드', desc: '월별 추이와 전체 현황' },
+  easyDiagnosis: {
     title: '쉬운 진단 마법사',
     desc: '기존 단계별 진단 화면',
-    icon: WandSparkles,
   },
-  {
-    key: 'diagnosis',
-    title: '전문 자동진단',
-    desc: '기존 상세 진단 화면',
-    icon: ClipboardList,
-  },
-  {
-    key: 'school',
-    title: '학교정보',
-    desc: '학교·담당자·계약정보',
-    icon: Building2,
-  },
-  {
-    key: 'bills',
-    title: '고지서 입력',
-    desc: '기존 자료 가져오기와 관리',
-    icon: FileSpreadsheet,
-  },
-  {
-    key: 'powerPlanner',
-    title: '파워플래너',
-    desc: '시간대별 사용 자료 가져오기',
-    icon: PlugZap,
-  },
-  {
-    key: 'rates',
-    title: '요금제 비교',
-    desc: '후보와 계산 근거 상세 비교',
-    icon: Calculator,
-  },
-  {
-    key: 'peak',
-    title: '피크관리',
-    desc: '운영 계획과 시나리오 검토',
-    icon: Activity,
-  },
-  {
-    key: 'docs',
-    title: '문서생성',
-    desc: '검토용 계획안·공문·신청서',
-    icon: FileText,
-  },
-  {
-    key: 'guide',
-    title: '전체 사용 안내',
-    desc: '자료 준비와 기능 설명',
-    icon: BookOpen,
-  },
-  {
-    key: 'settings',
-    title: '설정',
-    desc: '기존 요금표와 계산 설정',
-    icon: Settings,
-  },
-]
+  diagnosis: { title: '전문 자동진단', desc: '기존 상세 진단 화면' },
+  school: { title: '학교정보', desc: '학교·담당자·계약정보' },
+  bills: { title: '고지서 입력', desc: '기존 자료 가져오기와 관리' },
+  powerPlanner: { title: '파워플래너', desc: '시간대별 사용 자료 가져오기' },
+  rates: { title: '요금제 비교', desc: '후보와 계산 근거 상세 비교' },
+  peak: { title: '피크관리', desc: '운영 계획과 시나리오 검토' },
+  docs: { title: '문서생성', desc: '검토용 계획안·공문·신청서' },
+  guide: { title: '전체 사용 안내', desc: '자료 준비와 기능 설명' },
+  settings: { title: '설정', desc: '기존 요금표와 계산 설정' },
+}
+
+const featureItems = viewMenuItems
+  .filter((item) => item.key !== 'simple' && drawerMeta[item.key])
+  .map((item) => ({
+    key: item.key,
+    icon: item.icon,
+    title: drawerMeta[item.key]?.title ?? item.label,
+    desc: drawerMeta[item.key]?.desc ?? '',
+  }))
 
 const fieldHelpContent: Record<string, { title: string; body: string }> = {
   contract: {

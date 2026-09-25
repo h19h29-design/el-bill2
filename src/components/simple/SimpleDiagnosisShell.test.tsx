@@ -9,7 +9,7 @@ import {
 } from '@testing-library/react'
 import { afterEach, describe, expect, it } from 'vitest'
 import App from '../../App'
-import { openProView } from '../../testHelpers'
+import { dismissLanding, openProView } from '../../testHelpers'
 import { readStorageSnapshot } from '../../lib/storage'
 
 afterEach(() => {
@@ -45,6 +45,7 @@ const pastedCombinedYearMonth = [
 ].join('\n')
 
 const openPasteDialog = async () => {
+  await dismissLanding()
   fireEvent.click(screen.getByRole('button', { name: '파일 없이 입력하기' }))
   const methodDialog = await screen.findByRole('dialog')
   fireEvent.click(
@@ -80,6 +81,14 @@ const fillContractAndConfirm = () => {
 describe('간편 진단 흐름', () => {
   it('첫 화면은 업로드 안내만 보여주고 샘플 월별 표를 미리 채우지 않는다', () => {
     render(<App />)
+
+    // 첫 화면은 에너지 랜딩, CTA를 누르면 기존 입력 화면으로 이어진다.
+    expect(
+      screen.getByRole('heading', { name: /더 나은 내일/ }),
+    ).toBeTruthy()
+    fireEvent.click(
+      screen.getByRole('button', { name: '전기요금 절감 확인하기' }),
+    )
 
     expect(
       screen.getByRole('button', { name: '고지서·엑셀 올리기' }),
@@ -135,6 +144,7 @@ describe('간편 진단 흐름', () => {
 
   it('예시 자료 흐름은 결과까지 보여주되 저장소를 바꾸지 않는다', async () => {
     render(<App />)
+    await dismissLanding()
 
     fireEvent.click(screen.getByRole('button', { name: '예시로 살펴보기' }))
     await screen.findByRole('heading', { name: '월별 전기요금' })
@@ -147,6 +157,13 @@ describe('간편 진단 흐름', () => {
     expect(readStorageSnapshot()).toBeNull()
 
     fireEvent.click(screen.getByRole('button', { name: '내 자료로 시작' }))
+    // 홈으로 돌아가면 랜딩이 다시 보이고, CTA로 입력 화면에 진입한다.
+    expect(
+      await screen.findByRole('heading', { name: /더 나은 내일/ }),
+    ).toBeTruthy()
+    fireEvent.click(
+      screen.getByRole('button', { name: '전기요금 절감 확인하기' }),
+    )
     expect(
       await screen.findByRole('button', { name: '고지서·엑셀 올리기' }),
     ).toBeTruthy()

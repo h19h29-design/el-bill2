@@ -108,6 +108,7 @@ export function useSimpleDiagnosis({
   onOpenFeature,
 }: SimpleDiagnosisParams) {
   const [step, setStep] = useState<SimpleStep>('start')
+  const [landing, setLanding] = useState(true)
   const [rows, setRows] = useState<SimpleDraftRow[]>([])
   const [origin, setOrigin] = useState<
     Exclude<BillDataOrigin, 'sample'> | 'none'
@@ -141,6 +142,7 @@ export function useSimpleDiagnosis({
   const resetAll = useCallback(() => {
     operationRef.current += 1
     setStep('start')
+    setLanding(true)
     setRows([])
     setOrigin('none')
     setSourceLabel('')
@@ -590,9 +592,15 @@ export function useSimpleDiagnosis({
   const backToReview = useCallback(() => setStep('review'), [])
   const backToStart = useCallback(() => setStep('start'), [])
 
+  // The energy landing is a visual layer over the start step only.
+  // Dismissing it never clears in-progress rows or the current step.
+  const dismissLanding = useCallback(() => setLanding(false), [])
+
   return {
     step,
     setStep,
+    landing,
+    dismissLanding,
     rows,
     origin,
     sourceLabel,

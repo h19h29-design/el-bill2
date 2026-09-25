@@ -17,6 +17,7 @@ import { SimpleReviewScreen } from './SimpleReviewScreen'
 import { SimpleResultScreen } from './SimpleResultScreen'
 import { SimpleDialogs } from './SimpleDialogs'
 import './simple.css'
+import { EnergyLanding } from '../landing/EnergyLanding'
 
 export interface SimpleDiagnosisShellProps {
   diagnosis: AutoDiagnosisResult
@@ -73,6 +74,21 @@ export function SimpleDiagnosisShell(props: SimpleDiagnosisShellProps) {
 
   return (
     <div className="eb-root">
+      {state.landing && step === 'start' ? (
+        <EnergyLanding
+          onStart={state.dismissLanding}
+          onNavigate={(view) => {
+            if (view === 'simple') {
+              state.dismissLanding()
+            } else {
+              state.openFeature(view)
+            }
+          }}
+          onHome={state.requestHome}
+          notice={props.expiryMessage}
+        />
+      ) : (
+        <>
       <a className="eb-skip" href="#eb-main">
         본문으로 이동
       </a>
@@ -208,6 +224,8 @@ export function SimpleDiagnosisShell(props: SimpleDiagnosisShellProps) {
           </div>
         </footer>
       </div>
+        </>
+      )}
 
       <SimpleDialogs state={state} />
 
