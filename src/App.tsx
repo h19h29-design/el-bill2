@@ -34,6 +34,7 @@ import type { PowerPlannerDataSource } from './types'
 import { sortBillsChronologically } from './lib/calculations'
 import { isUserBillOrigin } from './lib/dataProvenance'
 import { buildAutoDiagnosis } from './lib/diagnosis'
+import { viewMenuItems } from './lib/viewMenu'
 import { buildPeakOperationPlan } from './lib/peakOperations'
 import { defaultCalculationSettings } from './lib/calculationSettings'
 import { normalizeRatePlanIdentityPart } from './lib/domainValidation'
@@ -156,6 +157,10 @@ const UsageGuide = lazy(() =>
   })),
 )
 
+// Valid view keys for history-state restoration, derived from the canonical
+// menu so a new ViewKey is recognised automatically.
+const appViewKeySet = new Set<string>(viewMenuItems.map((item) => item.key))
+
 function ViewLoadingFallback() {
   return (
     <div className="view-loading" role="status">
@@ -227,9 +232,59 @@ function App() {
     setExpiryMessage(message)
   }, [])
 
+  // Browser history integration: each user-driven view change pushes a history
+  // entry so Back returns to the previous view instead of leaving the app.
+  // We use pushState only (no hash) to avoid clashing with in-page anchors like
+  // #eb-main or #primary-cta.
+  const navigateTo = useCallback((view: ViewKey) => {
+    setGuideSectionId(null)
+    setActiveView(view)
+    try {
+      if ((history.state as { ebview?: unknown } | null)?.ebview === view) {
+        history.replaceState({ ebview: view }, '')
+      } else {
+        history.pushState({ ebview: view }, '')
+      }
+    } catch {
+      // Non-browser environments (tests without history impl.)
+    }
+  }, [])
+
+  useEffect(() => {
+    try {
+      // Tag the entry the app was loaded with so Back/Forward state is known.
+      history.replaceState({ ebview: 'simple' }, '')
+    } catch {
+      // ignore
+    }
+    const onPopState = (event: PopStateEvent) => {
+      const view = (event.state as { ebview?: unknown } | null)?.ebview
+      if (typeof view === 'string' && appViewKeySet.has(view)) {
+        setGuideSectionId(null)
+        setActiveView(view as ViewKey)
+      }
+    }
+    window.addEventListener('popstate', onPopState)
+    return () => window.removeEventListener('popstate', onPopState)
+  }, [])
+
+  // Keep the current history entry in sync when the view changes through a
+  // non-navigation path (e.g. storage reset to samples).
+  useEffect(() => {
+    try {
+      if (
+        (history.state as { ebview?: unknown } | null)?.ebview !== activeView
+      ) {
+        history.replaceState({ ebview: activeView }, '')
+      }
+    } catch {
+      // ignore
+    }
+  }, [activeView])
+
   const openGuide = (sectionId: string) => {
+    navigateTo('guide')
     setGuideSectionId(sectionId)
-    setActiveView('guide')
   }
 
   const runBillDraftMaintenance = useCallback(
@@ -862,7 +917,7 @@ function App() {
       }
       applySnapshot(result.snapshot)
       setExpiryMessage('')
-      setActiveView('diagnosis')
+      navigateTo('diagnosis')
       return {
         ok: true,
         dataSource: result.snapshot.data.powerPlanner,
@@ -898,7 +953,7 @@ function App() {
         return { ok: false }
       }
       applySnapshot(result.snapshot)
-      if (intent.dataSource) setActiveView('diagnosis')
+      if (intent.dataSource) navigateTo('diagnosis')
       return {
         ok: true,
         dataSource: result.snapshot.data.powerPlanner,
@@ -910,7 +965,7 @@ function App() {
       ...latest,
       powerPlanner: intent.origin,
     }))
-    if (intent.dataSource) setActiveView('diagnosis')
+    if (intent.dataSource) navigateTo('diagnosis')
     return {
       ok: true,
       dataSource: intent.dataSource,
@@ -934,10 +989,7 @@ function App() {
             expiresAt={storageSession?.expiresAt}
             expiryMessage={activeView === 'simple' ? expiryMessage : ''}
             onApply={applyEasyDiagnosisInput}
-            onOpenFeature={(view) => {
-              setGuideSectionId(null)
-              setActiveView(view)
-            }}
+            onOpenFeature={navigateTo}
           />
         </ViewErrorBoundary>
       </div>
@@ -945,10 +997,7 @@ function App() {
     <div className="app-shell">
       <Sidebar
         activeView={activeView}
-        onChange={(view) => {
-          setGuideSectionId(null)
-          setActiveView(view)
-        }}
+        onChange={navigateTo}
       />
       <main className="main-area">
         <header className="app-header">
@@ -993,7 +1042,7 @@ function App() {
                   scenario={scenario}
                   diagnosis={diagnosis}
                   dataProvenance={dataProvenance}
-                  onStartDiagnosis={() => setActiveView('easyDiagnosis')}
+                  onStartDiagnosis={() => navigateTo('easyDiagnosis')}
                 />
               )}
               {activeView === 'easyDiagnosis' && (
@@ -1003,14 +1052,14 @@ function App() {
                   diagnosis={diagnosis}
                   dataProvenance={dataProvenance}
                   onApply={applyEasyDiagnosisInput}
-                  onNavigate={setActiveView}
+                  onNavigate={navigateTo}
                 />
               )}
               {activeView === 'diagnosis' && (
                 <AutoDiagnosis
                   diagnosis={diagnosis}
                   dataProvenance={dataProvenance}
-                  onNavigate={setActiveView}
+                  onNavigate={navigateTo}
                 />
               )}
               {activeView === 'school' && (
@@ -1026,7 +1075,7 @@ function App() {
                   profile={profile}
                   ratePlans={ratePlans}
                   onBillsChange={applyBills}
-                  onAnalysisOpen={() => setActiveView('diagnosis')}
+                  onAnalysisOpen={() => navigateTo('diagnosis')}
                   onDraftLifecycleChange={registerBillDraftLifecycle}
                   onOpenGuide={openGuide}
                 />
@@ -1080,8 +1129,8 @@ function App() {
               {activeView === 'guide' && (
                 <UsageGuide
                   requestedSectionId={guideSectionId}
-                  onOpenBills={() => setActiveView('bills')}
-                  onOpenEasyDiagnosis={() => setActiveView('easyDiagnosis')}
+                  onOpenBills={() => navigateTo('bills')}
+                  onOpenEasyDiagnosis={() => navigateTo('easyDiagnosis')}
                 />
               )}
             </Suspense>

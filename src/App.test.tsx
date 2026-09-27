@@ -600,3 +600,77 @@ describe('shared live storage expiry', () => {
     ).toBeNull()
   })
 })
+
+describe('browser history navigation', () => {
+  const landingMenuButton = () =>
+    screen.queryByRole('button', { name: '전체 메뉴' })
+
+  it('returns to the first screen on browser back instead of leaving the app', async () => {
+    render(<App />)
+    await flushStorageTasks()
+    expect(landingMenuButton()).toBeTruthy()
+
+    await openProView('대시보드')
+    expect(
+      (history.state as { ebview?: string } | null)?.ebview,
+    ).toBe('dashboard')
+    expect(landingMenuButton()).toBeNull()
+
+    await act(async () => {
+      history.back()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+
+    await waitFor(() => {
+      expect(landingMenuButton()).toBeTruthy()
+    })
+    expect(
+      (history.state as { ebview?: string } | null)?.ebview,
+    ).toBe('simple')
+  })
+
+  it('moves forward again after navigating back', async () => {
+    render(<App />)
+    await flushStorageTasks()
+
+    await openProView('대시보드')
+    await act(async () => {
+      history.back()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    await waitFor(() => {
+      expect(landingMenuButton()).toBeTruthy()
+    })
+
+    await act(async () => {
+      history.forward()
+      await new Promise((resolve) => setTimeout(resolve, 0))
+    })
+    await waitFor(() => {
+      expect(landingMenuButton()).toBeNull()
+    })
+    expect(
+      (history.state as { ebview?: string } | null)?.ebview,
+    ).toBe('dashboard')
+  })
+
+  it('ignores history entries that do not carry a known view', async () => {
+    render(<App />)
+    await flushStorageTasks()
+
+    await openProView('대시보드')
+    expect(landingMenuButton()).toBeNull()
+
+    await act(async () => {
+      window.dispatchEvent(new PopStateEvent('popstate', { state: null }))
+      window.dispatchEvent(
+        new PopStateEvent('popstate', { state: { ebview: 'not-a-view' } }),
+      )
+      window.dispatchEvent(new PopStateEvent('popstate', { state: {} }))
+    })
+
+    // Still on the dashboard, not thrown back to the landing.
+    expect(landingMenuButton()).toBeNull()
+    expect(document.querySelector('.app-shell')).toBeTruthy()
+  })
+})
