@@ -239,7 +239,7 @@ export function EnergyLanding({
               />
               <img
                 className="school-image"
-                src="/assets/campus.webp"
+                src="/assets/campus-v2.webp"
                 width="1310"
                 height="484"
                 alt="전구와 플러그, 잎사귀가 있는 에너지 링이 학교 모형을 감싸는 모습"
